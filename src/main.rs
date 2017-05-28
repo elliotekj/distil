@@ -21,8 +21,8 @@ impl Distil {
     pub fn new(&self) {
         let scaled_image = self.scale_image();
 
-        let pixels = get_pixels(scaled_image);
-        let histogram = get_histogram(pixels);
+        let pixels = get_pixels(scaled_image.clone());
+        let histogram = get_histogram(pixels.clone());
 
         let colorspace = SimpleColorSpace::default();
         let mut quantizer = Quantizer::new(&histogram, &colorspace);
@@ -35,6 +35,10 @@ impl Distil {
 
         let optimizer = optimizer::KMeans;
         let palette = optimizer.optimize_palette(&colorspace, &palette, &histogram, 16);
+
+        let ditherer = ditherer::FloydSteinberg::checkered();
+        let remapper = Remapper::new(&palette, &colorspace, &ditherer);
+        let quantized_img = remapper.remap(&pixels, scaled_image.dimensions().1 as usize);
 
         output_palette_as_img(palette);
     }
