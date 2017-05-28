@@ -21,9 +21,9 @@ pub struct Distil {
 
 impl Distil {
     pub fn new(&self) {
-        let scaled_image = self.scale_image();
-        let quantized_image = self.quantize(scaled_image);
-        let color_vec = to_color_vec(quantized_image);
+        let scaled_img = self.scale_img();
+        let quantized_img = self.quantize(scaled_img);
+        let color_vec = to_color_vec(quantized_img);
         let color_histogram = get_histogram(color_vec);
         let sorted_histogram = sort_histogram(color_histogram);
 
@@ -34,7 +34,7 @@ impl Distil {
 
     // Proportionally scales the image to a size where the total number of pixels
     // does not exceed `max_sample_count`.
-    fn scale_image(&self) -> DynamicImage {
+    fn scale_img(&self) -> DynamicImage {
         let mut img = self.img.clone();
         let (width, height) = img.dimensions();
 
