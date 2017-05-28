@@ -1,9 +1,11 @@
+extern crate exoquant;
 extern crate image;
 
 use std::path::Path;
 
-use image::{GenericImage, DynamicImage};
+use exoquant::{Color, Histogram};
 use image::FilterType::Gaussian;
+use image::{GenericImage, DynamicImage, Rgba, Pixel};
 
 pub struct Distil {
     img: DynamicImage,
@@ -13,7 +15,9 @@ pub struct Distil {
 impl Distil {
     pub fn new(&self) {
         let scaled_image = self.scale_image();
-        println!("dimensions: {:?}", scaled_image.dimensions());
+
+        let pixels = get_pixels(scaled_image);
+        let histogram = get_histogram(pixels);
     }
 
     // Proportionally scales the image to a size where the total number of pixels
@@ -33,6 +37,39 @@ impl Distil {
 
         img
     }
+}
+
+fn get_pixels(img: DynamicImage) -> Vec<Color> {
+    let mut pixels = Vec::new();
+
+    for (_, _, px) in img.pixels() {
+        let rgba = px.to_rgba();
+
+        if has_transparency(&rgba) {
+            continue;
+        }
+
+        let rgba = Color::new(rgba[0], rgba[1], rgba[2], rgba[3]);
+        pixels.push(rgba);
+    }
+
+    pixels
+}
+
+// Creates a histogram that counts the number of times each color occurs in the
+// input image.
+fn get_histogram(pixels: Vec<Color>) -> Histogram {
+    let mut histogram = Histogram::new();
+
+    histogram.extend(pixels);
+
+    histogram
+}
+
+fn has_transparency(rgba: &Rgba<u8>) -> bool {
+    let alpha_channel = rgba[3];
+
+    alpha_channel != 255
 }
 
 fn main() {
