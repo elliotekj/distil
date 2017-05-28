@@ -2,6 +2,7 @@ extern crate exoquant;
 extern crate image;
 
 use std::path::Path;
+use std::fs::File;
 
 use exoquant::*;
 use exoquant::optimizer::Optimizer;
@@ -34,6 +35,8 @@ impl Distil {
 
         let optimizer = optimizer::KMeans;
         let palette = optimizer.optimize_palette(&colorspace, &palette, &histogram, 16);
+
+        output_palette_as_img(palette);
     }
 
     // Proportionally scales the image to a size where the total number of pixels
@@ -86,6 +89,25 @@ fn has_transparency(rgba: &Rgba<u8>) -> bool {
     let alpha_channel = rgba[3];
 
     alpha_channel != 255
+}
+
+fn output_palette_as_img(palette: Vec<Color>) {
+    let colors_img_width = 32 * palette.len() as u32;
+    let mut colors_img_buf = ImageBuffer::<Rgba<u8>, Vec<u8>>::new(colors_img_width, 32);
+
+    for (i, color) in palette.iter().enumerate() {
+        let x_offset = (32 * i) as u32;
+        let mut sub_img = imageops::crop(&mut colors_img_buf, x_offset, 0, 32, 32);
+        let rgba = Rgba::from_channels(color.r, color.g, color.b, color.a);
+
+        for (_, _, px) in sub_img.pixels_mut() {
+            px.data = rgba.data;
+        }
+    }
+
+    let filename = format!("fout.png");
+    let ref mut fout = File::create(&Path::new(&filename)).unwrap();
+    let _ = image::ImageRgba8(colors_img_buf).save(fout, image::PNG);
 }
 
 fn main() {
