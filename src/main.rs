@@ -1,5 +1,6 @@
 extern crate exoquant;
 extern crate image;
+extern crate itertools;
 
 use std::path::Path;
 use std::fs::File;
@@ -8,7 +9,8 @@ use exoquant::*;
 use exoquant::optimizer::Optimizer;
 use exoquant::{Color, Histogram};
 use image::FilterType::Gaussian;
-use image::{imageops, ImageBuffer, GenericImage, DynamicImage, Rgba, Pixel};
+use image::{imageops, ImageBuffer, GenericImage, DynamicImage, Rgba, Rgb, Pixel};
+use itertools::Itertools;
 
 static N_QUANTIZE: usize = 100;
 
@@ -21,6 +23,7 @@ impl Distil {
     pub fn new(&self) {
         let scaled_image = self.scale_image();
         let quantized_image = self.quantize(scaled_image);
+        let color_vec = to_color_vec(quantized_image);
 
         // let quantized_image_rgb_values = self.get_rgb_values(quantized_image);
 
@@ -100,6 +103,18 @@ fn has_transparency(rgba: &Rgba<u8>) -> bool {
     let alpha_channel = rgba[3];
 
     alpha_channel != 255
+}
+
+fn to_color_vec(rgba_as_u8_vec: Vec<u8>) -> Vec<Color> {
+    let rgba_chunks = rgba_as_u8_vec.iter().chunks(4);
+    let mut colors: Vec<Color> = Vec::new();
+
+    for chunk in &rgba_chunks {
+        let rgba_slice: Vec<u8> = chunk.cloned().collect();
+        colors.push(Color::new(rgba_slice[0], rgba_slice[1], rgba_slice[2], rgba_slice[3]));
+    }
+
+    colors
 }
 
 fn output_palette_as_img(palette: Vec<Color>) {
