@@ -1,6 +1,7 @@
 extern crate color_quant;
 extern crate image;
 extern crate itertools;
+extern crate lab;
 
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -10,6 +11,7 @@ use color_quant::NeuQuant;
 use image::FilterType::Gaussian;
 use image::{imageops, ImageBuffer, GenericImage, DynamicImage, Rgba, Rgb, Pixel};
 use itertools::Itertools;
+use lab::Lab;
 
 static NQ_SAMPLE_FACTION: i32 = 10;
 static NQ_PALETTE_SIZE: usize = 256;
@@ -27,6 +29,7 @@ impl Distil {
         let scaled_img = self.scale_img();
         let quantized_img = quantize(scaled_img);
         let color_histogram = get_histogram(quantized_img);
+        let colors_as_lab = to_lab(color_histogram);
     }
 
     // Proportionally scales the image to a size where the total number of pixels
@@ -116,14 +119,14 @@ fn is_white(rgba: &Rgba<u8>) -> bool {
     rgba[0] > MAX_WHITE && rgba[1] > MAX_WHITE && rgba[2] > MAX_WHITE
 }
 
-// fn output_palette_as_img(palette: Vec<Color>) {
-//     let colors_img_width = 32 * palette.len() as u32;
-//     let mut colors_img_buf = ImageBuffer::<Rgba<u8>, Vec<u8>>::new(colors_img_width, 32);
-
-//     for (i, color) in palette.iter().enumerate() {
-//         let x_offset = (32 * i) as u32;
-//         let mut sub_img = imageops::crop(&mut colors_img_buf, x_offset, 0, 32, 32);
-//         let rgba = Rgba::from_channels(color.r, color.g, color.b, color.a);
+fn to_lab(histogram: Vec<(Rgb<u8>, usize)>) -> Vec<(Lab, usize)> {
+    histogram.iter()
+        .fold(Vec::with_capacity(histogram.len()),
+              |mut acc, &(color, count)| {
+                  acc.push((Lab::from_rgb(&[color[0], color[1], color[2]]), count));
+                  acc
+              })
+}
 
 //         for (_, _, px) in sub_img.pixels_mut() {
 //             px.data = rgba.data;
