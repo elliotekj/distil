@@ -24,6 +24,7 @@ impl Distil {
         let scaled_image = self.scale_image();
         let quantized_image = self.quantize(scaled_image);
         let color_vec = to_color_vec(quantized_image);
+        let color_histogram = get_histogram(color_vec);
 
         // let quantized_image_rgb_values = self.get_rgb_values(quantized_image);
 
