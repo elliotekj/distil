@@ -25,6 +25,7 @@ impl Distil {
         let quantized_image = self.quantize(scaled_image);
         let color_vec = to_color_vec(quantized_image);
         let color_histogram = get_histogram(color_vec);
+        let sorted_histogram = sort_histogram(color_histogram);
 
         // let quantized_image_rgb_values = self.get_rgb_values(quantized_image);
 
@@ -98,6 +99,18 @@ fn get_histogram(pixels: Vec<Color>) -> Histogram {
     histogram.extend(pixels);
 
     histogram
+}
+
+fn sort_histogram(histogram: Histogram) -> Vec<(Color, usize)> {
+    let mut colors_and_count: Vec<(Color, usize)> = Vec::new();
+
+    for c in histogram.iter() {
+        colors_and_count.push((c.0.to_owned(), c.1.to_owned()));
+    }
+
+    colors_and_count.sort_by(|&(_, a), &(_, b)| a.cmp(&b));
+
+    colors_and_count
 }
 
 fn has_transparency(rgba: &Rgba<u8>) -> bool {
