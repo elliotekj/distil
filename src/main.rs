@@ -13,6 +13,8 @@ use itertools::Itertools;
 
 static NQ_SAMPLE_FACTION: i32 = 10;
 static NQ_PALETTE_SIZE: usize = 256;
+static MIN_BLACK: u8 = 5;
+static MAX_WHITE: u8 = 250;
 static MIN_DISTANCE: f32 = 10.0;
 
 pub struct Distil {
@@ -68,7 +70,7 @@ fn get_pixels(img: DynamicImage) -> Vec<u8> {
     for (_, _, px) in img.pixels() {
         let rgba = px.to_rgba();
 
-        if has_transparency(&rgba) {
+        if has_transparency(&rgba) || is_black(&rgba) || is_white(&rgba) {
             continue;
         }
 
@@ -104,6 +106,14 @@ fn has_transparency(rgba: &Rgba<u8>) -> bool {
     let alpha_channel = rgba[3];
 
     alpha_channel != 255
+}
+
+fn is_black(rgba: &Rgba<u8>) -> bool {
+    rgba[0] < MIN_BLACK && rgba[1] < MIN_BLACK && rgba[2] < MIN_BLACK
+}
+
+fn is_white(rgba: &Rgba<u8>) -> bool {
+    rgba[0] > MAX_WHITE && rgba[1] > MAX_WHITE && rgba[2] > MAX_WHITE
 }
 
 // fn output_palette_as_img(palette: Vec<Color>) {
