@@ -1,18 +1,19 @@
-extern crate exoquant;
+extern crate color_quant;
 extern crate image;
 extern crate itertools;
 
-use std::path::Path;
+use std::collections::BTreeMap;
 use std::fs::File;
+use std::path::Path;
 
-use exoquant::*;
-use exoquant::optimizer::Optimizer;
-use exoquant::{Color, Histogram};
+use color_quant::NeuQuant;
 use image::FilterType::Gaussian;
 use image::{imageops, ImageBuffer, GenericImage, DynamicImage, Rgba, Rgb, Pixel};
 use itertools::Itertools;
 
-static N_QUANTIZE: usize = 100;
+static NQ_SAMPLE_FACTION: i32 = 10;
+static NQ_PALETTE_SIZE: usize = 256;
+static MIN_DISTANCE: f32 = 10.0;
 
 pub struct Distil {
     img: DynamicImage,
@@ -22,14 +23,8 @@ pub struct Distil {
 impl Distil {
     pub fn new(&self) {
         let scaled_img = self.scale_img();
-        let quantized_img = self.quantize(scaled_img);
-        let color_vec = to_color_vec(quantized_img);
-        let color_histogram = get_histogram(color_vec);
-        let sorted_histogram = sort_histogram(color_histogram);
-
-        // let quantized_image_rgb_values = self.get_rgb_values(quantized_image);
-
-        // let color_histogram = self.get_histogram(quantized_image_rgb_values);
+        let quantized_img = quantize(scaled_img);
+        let color_histogram = get_histogram(quantized_img);
     }
 
     // Proportionally scales the image to a size where the total number of pixels
@@ -49,32 +44,25 @@ impl Distil {
 
         img
     }
-
-    // Reduce the image's color palette down to `N_QUANTIZE` colors.
-    fn quantize(&self, img: DynamicImage) -> Vec<u8> {
-        let pixels = get_pixels(img.clone());
-        let histogram = get_histogram(pixels.clone());
-
-        let colorspace = SimpleColorSpace::default();
-        let mut quantizer = Quantizer::new(&histogram, &colorspace);
-
-        while quantizer.num_colors() < N_QUANTIZE {
-            quantizer.step();
-        }
-
-        let palette = quantizer.colors(&colorspace);
-        let palette = optimizer::KMeans.optimize_palette(&colorspace, &palette, &histogram, 16);
-
-        let ditherer = ditherer::FloydSteinberg::checkered();
-        let remapper = Remapper::new(&palette, &colorspace, &ditherer);
-
-        // output_palette_as_img(palette);
-
-        remapper.remap(&pixels, img.dimensions().1 as usize)
-    }
 }
 
-fn get_pixels(img: DynamicImage) -> Vec<Color> {
+// Reduce the image's color palette down to 256 colors.
+fn quantize(img: DynamicImage) -> Vec<Rgb<u8>> {
+    let pixels = get_pixels(img);
+    let quantized = NeuQuant::new(NQ_SAMPLE_FACTION, NQ_PALETTE_SIZE, &pixels);
+
+    quantized.color_map_rgb()
+        .iter()
+        .chunks(3)
+        .into_iter()
+        .map(|rgb_iter| {
+            let rgb_slice: Vec<u8> = rgb_iter.cloned().collect();
+            Rgb::from_slice(&rgb_slice).clone()
+        })
+        .collect()
+}
+
+fn get_pixels(img: DynamicImage) -> Vec<u8> {
     let mut pixels = Vec::new();
 
     for (_, _, px) in img.pixels() {
@@ -84,8 +72,9 @@ fn get_pixels(img: DynamicImage) -> Vec<Color> {
             continue;
         }
 
-        let rgba = Color::new(rgba[0], rgba[1], rgba[2], rgba[3]);
-        pixels.push(rgba);
+        for channel in px.channels() {
+            pixels.push(*channel);
+        }
     }
 
     pixels
@@ -93,24 +82,22 @@ fn get_pixels(img: DynamicImage) -> Vec<Color> {
 
 // Creates a histogram that counts the number of times each color occurs in the
 // input image.
-fn get_histogram(pixels: Vec<Color>) -> Histogram {
-    let mut histogram = Histogram::new();
+fn get_histogram(pixels: Vec<Rgb<u8>>) -> Vec<(Rgb<u8>, usize)> {
+    let histogram_map = pixels.iter()
+        .fold(BTreeMap::new(), |mut acc, px| {
+            *acc.entry(px.channels()).or_insert(0) += 1;
+            acc
+        });
 
-    histogram.extend(pixels);
+    let mut histogram_vec = histogram_map.iter()
+        .fold(Vec::new(), |mut acc, (color, count)| {
+            acc.push((Rgb::from_slice(&color).to_owned(), *count as usize));
+            acc
+        });
 
-    histogram
-}
+    histogram_vec.sort_by(|&(_, a), &(_, b)| a.cmp(&b));
 
-fn sort_histogram(histogram: Histogram) -> Vec<(Color, usize)> {
-    let mut colors_and_count: Vec<(Color, usize)> = Vec::new();
-
-    for c in histogram.iter() {
-        colors_and_count.push((c.0.to_owned(), c.1.to_owned()));
-    }
-
-    colors_and_count.sort_by(|&(_, a), &(_, b)| a.cmp(&b));
-
-    colors_and_count
+    histogram_vec
 }
 
 fn has_transparency(rgba: &Rgba<u8>) -> bool {
@@ -119,36 +106,24 @@ fn has_transparency(rgba: &Rgba<u8>) -> bool {
     alpha_channel != 255
 }
 
-fn to_color_vec(rgba_as_u8_vec: Vec<u8>) -> Vec<Color> {
-    let rgba_chunks = rgba_as_u8_vec.iter().chunks(4);
-    let mut colors: Vec<Color> = Vec::new();
+// fn output_palette_as_img(palette: Vec<Color>) {
+//     let colors_img_width = 32 * palette.len() as u32;
+//     let mut colors_img_buf = ImageBuffer::<Rgba<u8>, Vec<u8>>::new(colors_img_width, 32);
 
-    for chunk in &rgba_chunks {
-        let rgba_slice: Vec<u8> = chunk.cloned().collect();
-        colors.push(Color::new(rgba_slice[0], rgba_slice[1], rgba_slice[2], rgba_slice[3]));
-    }
+//     for (i, color) in palette.iter().enumerate() {
+//         let x_offset = (32 * i) as u32;
+//         let mut sub_img = imageops::crop(&mut colors_img_buf, x_offset, 0, 32, 32);
+//         let rgba = Rgba::from_channels(color.r, color.g, color.b, color.a);
 
-    colors
-}
+//         for (_, _, px) in sub_img.pixels_mut() {
+//             px.data = rgba.data;
+//         }
+//     }
 
-fn output_palette_as_img(palette: Vec<Color>) {
-    let colors_img_width = 32 * palette.len() as u32;
-    let mut colors_img_buf = ImageBuffer::<Rgba<u8>, Vec<u8>>::new(colors_img_width, 32);
-
-    for (i, color) in palette.iter().enumerate() {
-        let x_offset = (32 * i) as u32;
-        let mut sub_img = imageops::crop(&mut colors_img_buf, x_offset, 0, 32, 32);
-        let rgba = Rgba::from_channels(color.r, color.g, color.b, color.a);
-
-        for (_, _, px) in sub_img.pixels_mut() {
-            px.data = rgba.data;
-        }
-    }
-
-    let filename = format!("fout.png");
-    let ref mut fout = File::create(&Path::new(&filename)).unwrap();
-    let _ = image::ImageRgba8(colors_img_buf).save(fout, image::PNG);
-}
+//     let filename = format!("fout.png");
+//     let ref mut fout = File::create(&Path::new(&filename)).unwrap();
+//     let _ = image::ImageRgba8(colors_img_buf).save(fout, image::PNG);
+// }
 
 fn main() {
     let file = "/Users/elliot/dev/distil/test/sample-1.jpg";

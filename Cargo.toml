@@ -4,5 +4,6 @@ version = "0.1.0"
 authors = ["Elliot Jackson <elliotekj@gmail.com>"]
 
 [dependencies]
-exoquant = "0.2.0"
+color_quant = "1.0.0"
 image = "0.13.0"
+itertools = "0.6.0"
