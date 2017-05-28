@@ -3,9 +3,13 @@ extern crate image;
 
 use std::path::Path;
 
+use exoquant::*;
+use exoquant::optimizer::Optimizer;
 use exoquant::{Color, Histogram};
 use image::FilterType::Gaussian;
-use image::{GenericImage, DynamicImage, Rgba, Pixel};
+use image::{imageops, ImageBuffer, GenericImage, DynamicImage, Rgba, Pixel};
+
+static N_QUANTIZE: usize = 100;
 
 pub struct Distil {
     img: DynamicImage,
@@ -18,6 +22,18 @@ impl Distil {
 
         let pixels = get_pixels(scaled_image);
         let histogram = get_histogram(pixels);
+
+        let colorspace = SimpleColorSpace::default();
+        let mut quantizer = Quantizer::new(&histogram, &colorspace);
+
+        while quantizer.num_colors() < N_QUANTIZE {
+            quantizer.step();
+        }
+
+        let palette = quantizer.colors(&colorspace);
+
+        let optimizer = optimizer::KMeans;
+        let palette = optimizer.optimize_palette(&colorspace, &palette, &histogram, 16);
     }
 
     // Proportionally scales the image to a size where the total number of pixels
@@ -78,6 +94,6 @@ fn main() {
 
     Distil::new(&Distil {
         img: img,
-        max_sample_count: 1000,
+        max_sample_count: 5000,
     });
 }
