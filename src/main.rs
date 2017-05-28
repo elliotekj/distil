@@ -20,27 +20,11 @@ pub struct Distil {
 impl Distil {
     pub fn new(&self) {
         let scaled_image = self.scale_image();
+        let quantized_image = self.quantize(scaled_image);
 
-        let pixels = get_pixels(scaled_image.clone());
-        let histogram = get_histogram(pixels.clone());
+        // let quantized_image_rgb_values = self.get_rgb_values(quantized_image);
 
-        let colorspace = SimpleColorSpace::default();
-        let mut quantizer = Quantizer::new(&histogram, &colorspace);
-
-        while quantizer.num_colors() < N_QUANTIZE {
-            quantizer.step();
-        }
-
-        let palette = quantizer.colors(&colorspace);
-
-        let optimizer = optimizer::KMeans;
-        let palette = optimizer.optimize_palette(&colorspace, &palette, &histogram, 16);
-
-        let ditherer = ditherer::FloydSteinberg::checkered();
-        let remapper = Remapper::new(&palette, &colorspace, &ditherer);
-        let quantized_img = remapper.remap(&pixels, scaled_image.dimensions().1 as usize);
-
-        output_palette_as_img(palette);
+        // let color_histogram = self.get_histogram(quantized_image_rgb_values);
     }
 
     // Proportionally scales the image to a size where the total number of pixels
@@ -59,6 +43,29 @@ impl Distil {
         }
 
         img
+    }
+
+    // Reduce the image's color palette down to `N_QUANTIZE` colors.
+    fn quantize(&self, img: DynamicImage) -> Vec<u8> {
+        let pixels = get_pixels(img.clone());
+        let histogram = get_histogram(pixels.clone());
+
+        let colorspace = SimpleColorSpace::default();
+        let mut quantizer = Quantizer::new(&histogram, &colorspace);
+
+        while quantizer.num_colors() < N_QUANTIZE {
+            quantizer.step();
+        }
+
+        let palette = quantizer.colors(&colorspace);
+        let palette = optimizer::KMeans.optimize_palette(&colorspace, &palette, &histogram, 16);
+
+        let ditherer = ditherer::FloydSteinberg::checkered();
+        let remapper = Remapper::new(&palette, &colorspace, &ditherer);
+
+        // output_palette_as_img(palette);
+
+        remapper.remap(&pixels, img.dimensions().1 as usize)
     }
 }
 
