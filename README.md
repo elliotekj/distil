@@ -61,7 +61,7 @@ and merged together when building `refined_palette`.
   get one `Distil` from the colours of multiple images.
 - [ ] Investigate a better way to scale down images. `image`'s
   [`resize`](https://docs.rs/image/0.13.0/image/enum.DynamicImage.html#method.resize)
-  is too slow.
+  is too slow on large images.
 
 ## Examples
 
@@ -80,10 +80,10 @@ and merged together when building `refined_palette`.
 
 <br>
 
-![](https://github.com/elliotekj/distil/blob/master/images/img-5.jpg?raw=true)
-![](https://github.com/elliotekj/distil/blob/master/images/img-5-palette.png?raw=true)
+![](https://github.com/elliotekj/distil/blob/master/images/img-6.jpg?raw=true)
+![](https://github.com/elliotekj/distil/blob/master/images/img-6-palette.png?raw=true)
 
 <br>
 
-![](https://github.com/elliotekj/distil/blob/master/images/img-6.jpg?raw=true)
-![](https://github.com/elliotekj/distil/blob/master/images/img-6-palette.png?raw=true)
+![](https://github.com/elliotekj/distil/blob/master/images/img-5.jpg?raw=true)
+![](https://github.com/elliotekj/distil/blob/master/images/img-5-palette.png?raw=true)
