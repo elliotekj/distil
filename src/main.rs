@@ -16,9 +16,9 @@ use lab::Lab;
 
 static NQ_SAMPLE_FACTION: i32 = 10;
 static NQ_PALETTE_SIZE: usize = 256;
-static MIN_BLACK: u8 = 5;
-static MAX_WHITE: u8 = 250;
-static MIN_DISTANCE: f32 = 10.0;
+static MIN_BLACK: u8 = 8;
+static MAX_WHITE: u8 = 247;
+static MIN_DISTANCE_FOR_UNIQUENESS: f32 = 10.0;
 
 pub struct Distil {
     img: DynamicImage,
