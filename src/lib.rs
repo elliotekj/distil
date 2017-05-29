@@ -173,7 +173,7 @@ fn remove_similar_colors(palette: Vec<(Lab, usize)>) -> Vec<(Lab, usize)> {
         refined_palette[i].1 += count_y as usize;
     }
 
-    refined_palette.sort_by(|&(_, a), &(_, b)| a.cmp(&b));
+    refined_palette.sort_by(|&(_, a), &(_, b)| b.cmp(&a));
 
     refined_palette
 }
@@ -213,12 +213,21 @@ fn output_palette_as_img(palette: Vec<(Lab, usize)>, palette_size: u8) {
     };
 }
 
-fn main() {
-    let file = "/Users/elliot/dev/distil/test/sample-4.png";
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
 
-    if let Ok(img) = image::open(&Path::new(&file)) {
-        Distil::new(img, 8);
-    } else {
-        println!("Failed to open the passed image.");
+    use image;
+    use super::Distil;
+
+    #[test]
+    fn it_works() {
+        let file = "/Users/elliot/dev/distil/images/img-1.jpg";
+
+        if let Ok(img) = image::open(&Path::new(&file)) {
+            Distil::new(img, 5);
+        } else {
+            println!("Failed to open the passed image.");
+        }
     }
 }
