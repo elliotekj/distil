@@ -5,6 +5,8 @@
 Distil is a Rust library that creates a colour palette from the most frequently
 used colours in an image.
 
+| [**Examples**](https://github.com/elliotekj/distil#examples) | [**How does it work?**](https://github.com/elliotekj/distil#how-does-it-work) | [**1.0 checklist**](https://github.com/elliotekj/distil#10-checklist) |
+
 ## How does it work?
 
 Lets go through it step by step.
