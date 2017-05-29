@@ -31,6 +31,8 @@ impl Distil {
         let color_histogram = get_histogram(quantized_img);
         let colors_as_lab = to_lab(color_histogram);
         let palette = remove_similar_colors(colors_as_lab);
+
+        output_palette_as_img(palette);
     }
 
     // Proportionally scales the image to a size where the total number of pixels
@@ -158,6 +160,26 @@ fn remove_similar_colors(palette: Vec<(Lab, usize)>) -> Vec<(Lab, usize)> {
     refined_palette.sort_by(|&(_, a), &(_, b)| a.cmp(&b));
 
     refined_palette
+}
+
+fn output_palette_as_img(palette: Vec<(Lab, usize)>) {
+    let colors_img_width = 80 * palette.len() as u32;
+    let mut colors_img_buf = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(colors_img_width, 80);
+
+    for (i, &(color, _)) in palette.iter().enumerate() {
+        let x_offset = (80 * i) as u32;
+        let mut sub_img = imageops::crop(&mut colors_img_buf, x_offset, 0, 80, 80);
+        let as_rgb = Lab::to_rgb(&color);
+        let rgb = Rgb::from_channels(as_rgb[0], as_rgb[1], as_rgb[2], 255);
+
+        for (_, _, px) in sub_img.pixels_mut() {
+            px.data = rgb.data;
+        }
+    }
+
+    let filename = format!("fout.png");
+    let ref mut fout = File::create(&Path::new(&filename)).unwrap();
+    let _ = image::ImageRgb8(colors_img_buf).save(fout, image::PNG);
 }
 
 fn main() {
