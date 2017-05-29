@@ -8,6 +8,7 @@ use std::fs::File;
 use std::path::Path;
 
 use color_quant::NeuQuant;
+use delta_e::DE2000;
 use image::FilterType::Gaussian;
 use image::{imageops, ImageBuffer, GenericImage, DynamicImage, Rgba, Rgb, Pixel};
 use itertools::Itertools;

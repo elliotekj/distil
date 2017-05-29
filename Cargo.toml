@@ -5,5 +5,7 @@ authors = ["Elliot Jackson <elliotekj@gmail.com>"]
 
 [dependencies]
 color_quant = "1.0.0"
+delta_e = "0.1.0"
 image = "0.13.0"
 itertools = "0.6.0"
+lab = "0.4.2"
