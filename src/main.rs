@@ -139,11 +139,11 @@ fn to_lab(histogram: Vec<(Rgb<u8>, usize)>) -> Vec<(Lab, usize)> {
 // }
 
 fn main() {
-    let file = "/Users/elliot/dev/distil/test/sample-1.jpg";
+    let file = "/Users/elliot/dev/distil/test/sample-3.png";
     let img = image::open(&Path::new(&file)).unwrap();
 
     Distil::new(&Distil {
         img: img,
-        max_sample_count: 5000,
+        max_sample_count: 1000,
     });
 }
