@@ -28,9 +28,9 @@ impl Distil {
     pub fn new(img: DynamicImage, palette_size: u8) {
         let scaled_img = scale_img(img);
         let quantized_img = quantize(scaled_img);
-        let color_histogram = get_histogram(quantized_img);
-        let colors_as_lab = to_lab(color_histogram);
-        let palette = remove_similar_colors(colors_as_lab);
+
+        let color_count = count_colors_as_lab(quantized_img);
+        let palette = remove_similar_colors(color_count);
 
         output_palette_as_img(palette, palette_size);
     }
@@ -113,33 +113,25 @@ fn is_white(rgba: &Rgba<u8>) -> bool {
     rgba[0] > MAX_WHITE && rgba[1] > MAX_WHITE && rgba[2] > MAX_WHITE
 }
 
-// Creates a histogram that counts the number of times each color occurs in the
-// input image.
-fn get_histogram(pixels: Vec<Rgb<u8>>) -> Vec<(Rgb<u8>, usize)> {
-    let histogram_map = pixels.iter()
+/// Maps each unique Lab color in the passed `Vec` of pixels to the total
+/// number of times that color appears in the `Vec`.
+fn count_colors_as_lab(pixels: Vec<Rgb<u8>>) -> Vec<(Lab, usize)> {
+    let color_count_map = pixels.iter()
         .fold(BTreeMap::new(), |mut acc, px| {
             *acc.entry(px.channels()).or_insert(0) += 1;
             acc
         });
 
-    let mut histogram_vec = histogram_map.iter()
+    let mut color_count_vec = color_count_map.iter()
         .fold(Vec::new(), |mut acc, (color, count)| {
-            acc.push((Rgb::from_slice(&color).to_owned(), *count as usize));
+            let rgb = Rgb::from_slice(&color).to_owned();
+            acc.push((Lab::from_rgb(&[rgb[0], rgb[1], rgb[2]]), *count as usize));
             acc
         });
 
-    histogram_vec.sort_by(|&(_, a), &(_, b)| b.cmp(&a));
+    color_count_vec.sort_by(|&(_, a), &(_, b)| b.cmp(&a));
 
-    histogram_vec
-}
-
-fn to_lab(histogram: Vec<(Rgb<u8>, usize)>) -> Vec<(Lab, usize)> {
-    histogram.iter()
-        .fold(Vec::with_capacity(histogram.len()),
-              |mut acc, &(color, count)| {
-                  acc.push((Lab::from_rgb(&[color[0], color[1], color[2]]), count));
-                  acc
-              })
+    color_count_vec
 }
 
 fn remove_similar_colors(palette: Vec<(Lab, usize)>) -> Vec<(Lab, usize)> {
