@@ -30,6 +30,7 @@ impl Distil {
         let quantized_img = quantize(scaled_img);
         let color_histogram = get_histogram(quantized_img);
         let colors_as_lab = to_lab(color_histogram);
+        let palette = remove_similar_colors(colors_as_lab);
     }
 
     // Proportionally scales the image to a size where the total number of pixels
@@ -128,15 +129,36 @@ fn to_lab(histogram: Vec<(Rgb<u8>, usize)>) -> Vec<(Lab, usize)> {
               })
 }
 
-//         for (_, _, px) in sub_img.pixels_mut() {
-//             px.data = rgba.data;
-//         }
-//     }
+fn remove_similar_colors(palette: Vec<(Lab, usize)>) -> Vec<(Lab, usize)> {
+    let mut additions = Vec::new();
+    let mut refined_palette: Vec<(Lab, usize)> = Vec::new();
 
-//     let filename = format!("fout.png");
-//     let ref mut fout = File::create(&Path::new(&filename)).unwrap();
-//     let _ = image::ImageRgba8(colors_img_buf).save(fout, image::PNG);
-// }
+    for &(lab_x, count_x) in palette.iter() {
+        let mut is_similar = false;
+
+        for (i, &(lab_y, _)) in refined_palette.iter().enumerate() {
+            let delta = DE2000::new(lab_x.into(), lab_y.into());
+
+            if delta < MIN_DISTANCE_FOR_UNIQUENESS {
+                additions.push((i, count_x));
+                is_similar = true;
+                break;
+            }
+        }
+
+        if !is_similar {
+            refined_palette.push((lab_x, count_x));
+        }
+    }
+
+    for &(i, count) in &additions {
+        refined_palette[i].1 += count;
+    }
+
+    refined_palette.sort_by(|&(_, a), &(_, b)| a.cmp(&b));
+
+    refined_palette
+}
 
 fn main() {
     let file = "/Users/elliot/dev/distil/test/sample-3.png";
