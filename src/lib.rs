@@ -57,20 +57,22 @@ impl Distil {
     /// ## Example
     ///
     /// ```
+    /// use distil::Distil;
+    ///
     /// let path_str = "/Users/elliot/dev/distil/images/img-1.jpg";
     ///
-    /// if let Ok(Distil::from_path_str(path_str)) {
+    /// if let Ok(distilled) = Distil::from_path_str(path_str) {
     ///     // Do something with the returned `Distil` struct…
     /// }
     /// ```
-    pub fn from_path_str(path_str: &str, palette_size: u8) -> Result<Distil, DistilError> {
+    pub fn from_path_str(path_str: &str) -> Result<Distil, DistilError> {
         match image::open(&Path::new(&path_str)) {
-            Ok(img) => Ok(Distil::new(img, palette_size)),
+            Ok(img) => Ok(Distil::new(img)),
             Err(err) => Err(DistilError::Io(path_str.to_string(), err)),
         }
     }
 
-    fn new(img: DynamicImage, palette_size: u8) -> Distil {
+    fn new(img: DynamicImage) -> Distil {
         let scaled_img = scale_img(img);
         let quantized_img = quantize(scaled_img);
 
@@ -78,6 +80,52 @@ impl Distil {
         let palette = remove_similar_colors(color_count);
 
         distil_palette(palette)
+    }
+
+    /// Export the distilled color palette as a PNG.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use std::path::Path;
+    /// use distil::Distil;
+    ///
+    /// let path_str = "/Users/elliot/dev/distil/images/img-1.jpg";
+    /// let output_str = "img-1-palette.png";
+    /// let palette_size = 5;
+    ///
+    /// if let Ok(distilled) = Distil::from_path_str(path_str) {
+    ///     distilled.as_img(&Path::new(output_str), palette_size);
+    /// }
+    /// ```
+    pub fn as_img(&self, out_path: &Path, palette_size: u8) {
+        let colors_img_width;
+
+        if self.colors.len() < palette_size as usize {
+            colors_img_width = 80 * self.colors.len();
+        } else {
+            colors_img_width = 80 * palette_size as usize;
+        }
+
+        let mut colors_img_buf = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(colors_img_width as u32, 80);
+
+        for (i, color) in self.colors.iter().enumerate() {
+            let x_offset = (80 * i) as u32;
+            let mut sub_img = imageops::crop(&mut colors_img_buf, x_offset, 0, 80, 80);
+            let rgb = Rgb::from_channels(color[0], color[1], color[2], 255);
+
+            for (_, _, px) in sub_img.pixels_mut() {
+                px.data = rgb.data;
+            }
+
+            if i == palette_size as usize - 1 {
+                break;
+            }
+        }
+
+        if let Ok(ref mut fout) = File::create(&out_path) {
+            let _ = image::ImageRgb8(colors_img_buf).save(fout, image::PNG);
+        };
     }
 }
 
@@ -244,55 +292,19 @@ fn distil_palette(palette: Vec<(Lab, usize)>) -> Distil {
     }
 }
 
-fn output_palette_as_img(palette: Vec<(Lab, usize)>, palette_size: u8) {
-    let colors_img_width;
-
-    if palette.len() < palette_size as usize {
-        colors_img_width = 80 * palette.len();
-    } else {
-        colors_img_width = 80 * palette_size as usize;
-    }
-
-    let mut colors_img_buf = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(colors_img_width as u32, 80);
-
-    for (i, &(color, _)) in palette.iter().enumerate() {
-        let x_offset = (80 * i) as u32;
-        let mut sub_img = imageops::crop(&mut colors_img_buf, x_offset, 0, 80, 80);
-        let as_rgb = Lab::to_rgb(&color);
-        let rgb = Rgb::from_channels(as_rgb[0], as_rgb[1], as_rgb[2], 255);
-
-        for (_, _, px) in sub_img.pixels_mut() {
-            px.data = rgb.data;
-        }
-
-        if i == palette_size as usize - 1 {
-            break;
-        }
-    }
-
-    let filename = format!("fout.png");
-
-    if let Ok(ref mut fout) = File::create(&Path::new(&filename)) {
-        let _ = image::ImageRgb8(colors_img_buf).save(fout, image::PNG);
-    } else {
-        println!("Failed to save the palette as an image.");
-    };
-}
-
 #[cfg(test)]
 mod tests {
-    // use std::path::Path;
+    use std::path::Path;
 
-    // use image;
     use super::Distil;
 
     #[test]
     fn from_path_str() {
         let path_str = "/Users/elliot/dev/distil/images/img-1.jpg";
 
-        match Distil::from_path_str(path_str, 5) {
+        match Distil::from_path_str(path_str) {
             Ok(distilled) => {
-                println!("{:?}", distilled);
+                distilled.as_img(&Path::new("img-1-palette.png"), 5);
             }
             Err(err) => {
                 println!("{}", err);
