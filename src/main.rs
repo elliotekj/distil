@@ -1,4 +1,5 @@
 extern crate color_quant;
+extern crate delta_e;
 extern crate image;
 extern crate itertools;
 extern crate lab;
@@ -14,20 +15,18 @@ use image::{imageops, ImageBuffer, GenericImage, DynamicImage, Rgba, Rgb, Pixel}
 use itertools::Itertools;
 use lab::Lab;
 
+static MAX_SAMPLE_COUNT: u32 = 1000;
 static NQ_SAMPLE_FACTION: i32 = 10;
 static NQ_PALETTE_SIZE: usize = 256;
 static MIN_BLACK: u8 = 8;
 static MAX_WHITE: u8 = 247;
 static MIN_DISTANCE_FOR_UNIQUENESS: f32 = 10.0;
 
-pub struct Distil {
-    img: DynamicImage,
-    max_sample_count: u32,
-}
+pub struct Distil;
 
 impl Distil {
-    pub fn new(&self) {
-        let scaled_img = self.scale_img();
+    pub fn new(img: DynamicImage) {
+        let scaled_img = scale_img(img);
         let quantized_img = quantize(scaled_img);
         let color_histogram = get_histogram(quantized_img);
         let colors_as_lab = to_lab(color_histogram);
@@ -35,24 +34,23 @@ impl Distil {
 
         output_palette_as_img(palette);
     }
+}
 
-    // Proportionally scales the image to a size where the total number of pixels
-    // does not exceed `max_sample_count`.
-    fn scale_img(&self) -> DynamicImage {
-        let mut img = self.img.clone();
-        let (width, height) = img.dimensions();
+// Proportionally scales the image to a size where the total number of pixels
+// does not exceed `MAX_SAMPLE_COUNT`.
+fn scale_img(mut img: DynamicImage) -> DynamicImage {
+    let (width, height) = img.dimensions();
 
-        if width * height > self.max_sample_count {
-            let (width, height) = (width as f32, height as f32);
-            let ratio = width / height;
+    if width * height > MAX_SAMPLE_COUNT {
+        let (width, height) = (width as f32, height as f32);
+        let ratio = width / height;
 
-            let scaled_width = (ratio * (self.max_sample_count as f32)).sqrt() as u32;
+        let scaled_width = (ratio * (MAX_SAMPLE_COUNT as f32)).sqrt() as u32;
 
-            img = img.resize(scaled_width, height as u32, Gaussian);
-        }
-
-        img
+        img = img.resize(scaled_width, height as u32, Gaussian);
     }
+
+    img
 }
 
 // Reduce the image's color palette down to 256 colors.
@@ -187,8 +185,5 @@ fn main() {
     let file = "/Users/elliot/dev/distil/test/sample-3.png";
     let img = image::open(&Path::new(&file)).unwrap();
 
-    Distil::new(&Distil {
-        img: img,
-        max_sample_count: 1000,
-    });
+    Distil::new(img);
 }
