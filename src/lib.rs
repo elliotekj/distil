@@ -33,27 +33,38 @@ quick_error! {
     }
 }
 
-pub struct Distil;
+/// Represents a distilled image.
+#[derive(Debug, Clone)]
+pub struct Distil {
+    /// `colors` contains all of the RGB values the image was distilled down
+    /// into organised from most-frequent to least-frequent.
+    pub colors: Vec<[u8; 3]>,
+
+    /// `color_count` maps the index of each color in `colors` to the total
+    /// number of colors that were distilled down into that same color from a
+    /// palette of 256.
+    ///
+    /// It can be used, for example, to weight a colors importance when
+    /// distilling multiple palettes into one.
+    pub color_count: BTreeMap<usize, usize>,
+}
 
 impl Distil {
-    pub fn from_path_str(path_str: &str, palette_size: u8) -> Result<(), DistilError> {
+    pub fn from_path_str(path_str: &str, palette_size: u8) -> Result<Distil, DistilError> {
         match image::open(&Path::new(&path_str)) {
-            Ok(img) => {
-                Distil::new(img, palette_size);
-                Ok(())
-            }
+            Ok(img) => Ok(Distil::new(img, palette_size)),
             Err(err) => Err(DistilError::Io(path_str.to_string(), err)),
         }
     }
 
-    pub fn new(img: DynamicImage, palette_size: u8) {
+    fn new(img: DynamicImage, palette_size: u8) -> Distil {
         let scaled_img = scale_img(img);
         let quantized_img = quantize(scaled_img);
 
         let color_count = count_colors_as_lab(quantized_img);
         let palette = remove_similar_colors(color_count);
 
-        output_palette_as_img(palette, palette_size);
+        distil_palette(palette)
     }
 }
 
@@ -203,6 +214,23 @@ fn remove_similar_colors(palette: Vec<(Lab, usize)>) -> Vec<(Lab, usize)> {
     refined_palette
 }
 
+/// Organises the produced color palette into something that's useful for a
+/// user.
+fn distil_palette(palette: Vec<(Lab, usize)>) -> Distil {
+    let mut colors = Vec::new();
+    let mut color_count = BTreeMap::new();
+
+    for (i, &(lab_color, count)) in palette.iter().enumerate() {
+        colors.push(lab_color.to_rgb());
+        color_count.insert(i, count);
+    }
+
+    Distil {
+        colors: colors,
+        color_count: color_count,
+    }
+}
+
 fn output_palette_as_img(palette: Vec<(Lab, usize)>, palette_size: u8) {
     let colors_img_width;
 
@@ -250,7 +278,9 @@ mod tests {
         let path_str = "/Users/elliot/dev/distil/images/img-1.jpg";
 
         match Distil::from_path_str(path_str, 5) {
-            Ok(_) => {}
+            Ok(distilled) => {
+                println!("{:?}", distilled);
+            }
             Err(err) => {
                 println!("{}", err);
             }
