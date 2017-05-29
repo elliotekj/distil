@@ -205,13 +205,20 @@ fn output_palette_as_img(palette: Vec<(Lab, usize)>, palette_size: u8) {
     }
 
     let filename = format!("fout.png");
-    let ref mut fout = File::create(&Path::new(&filename)).unwrap();
-    let _ = image::ImageRgb8(colors_img_buf).save(fout, image::PNG);
+
+    if let Ok(ref mut fout) = File::create(&Path::new(&filename)) {
+        let _ = image::ImageRgb8(colors_img_buf).save(fout, image::PNG);
+    } else {
+        println!("Failed to save the palette as an image.");
+    };
 }
 
 fn main() {
-    let file = "/Users/elliot/dev/distil/test/sample-3.png";
-    let img = image::open(&Path::new(&file)).unwrap();
+    let file = "/Users/elliot/dev/distil/test/sample-4.png";
 
-    Distil::new(img, 8);
+    if let Ok(img) = image::open(&Path::new(&file)) {
+        Distil::new(img, 8);
+    } else {
+        println!("Failed to open the passed image.");
+    }
 }
