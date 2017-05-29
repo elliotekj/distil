@@ -131,7 +131,7 @@ fn to_lab(histogram: Vec<(Rgb<u8>, usize)>) -> Vec<(Lab, usize)> {
 }
 
 fn remove_similar_colors(palette: Vec<(Lab, usize)>) -> Vec<(Lab, usize)> {
-    let mut additions = Vec::new();
+    let mut similars = Vec::new();
     let mut refined_palette: Vec<(Lab, usize)> = Vec::new();
 
     for &(lab_x, count_x) in palette.iter() {
@@ -141,7 +141,7 @@ fn remove_similar_colors(palette: Vec<(Lab, usize)>) -> Vec<(Lab, usize)> {
             let delta = DE2000::new(lab_x.into(), lab_y.into());
 
             if delta < MIN_DISTANCE_FOR_UNIQUENESS {
-                additions.push((i, count_x));
+                similars.push((i, lab_x, count_x));
                 is_similar = true;
                 break;
             }
@@ -152,8 +152,25 @@ fn remove_similar_colors(palette: Vec<(Lab, usize)>) -> Vec<(Lab, usize)> {
         }
     }
 
-    for &(i, count) in &additions {
-        refined_palette[i].1 += count;
+    for &(i, lab_y, count) in &similars {
+        let lab_x = refined_palette[i].0;
+        let (lx, ax, bx) = (lab_x.l, lab_x.a, lab_x.b);
+        let (ly, ay, by) = (lab_y.l, lab_y.a, lab_y.b);
+
+        let count_x = refined_palette[i].1 as f32;
+        let count_y = count as f32;
+
+        let balanced_l = (lx * count_x + ly * count_y) / (count_x + count_y);
+        let balanced_a = (ax * count_x + ay * count_y) / (count_x + count_y);
+        let balanced_b = (bx * count_x + by * count_y) / (count_x + count_y);
+
+        refined_palette[i].0 = Lab {
+            l: balanced_l,
+            a: balanced_a,
+            b: balanced_b,
+        };
+
+        refined_palette[i].1 += count_y as usize;
     }
 
     refined_palette.sort_by(|&(_, a), &(_, b)| a.cmp(&b));
