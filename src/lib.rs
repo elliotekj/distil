@@ -27,6 +27,7 @@ static MIN_DISTANCE_FOR_UNIQUENESS: f32 = 10.0;
 quick_error! {
     #[derive(Debug)]
     pub enum DistilError {
+        /// Produced when Distil fails to parse the passed path.
         Io(path: String, err: image::ImageError) {
             display("Distil failed to parse the passed image: {}", err)
         }
@@ -50,6 +51,18 @@ pub struct Distil {
 }
 
 impl Distil {
+    /// `from_path_str` takes a path to an image which exists locally on the
+    /// system and `Distil`s it.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// let path_str = "/Users/elliot/dev/distil/images/img-1.jpg";
+    ///
+    /// if let Ok(Distil::from_path_str(path_str)) {
+    ///     // Do something with the returned `Distil` struct…
+    /// }
+    /// ```
     pub fn from_path_str(path_str: &str, palette_size: u8) -> Result<Distil, DistilError> {
         match image::open(&Path::new(&path_str)) {
             Ok(img) => Ok(Distil::new(img, palette_size)),
