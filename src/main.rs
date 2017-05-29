@@ -100,7 +100,7 @@ fn get_histogram(pixels: Vec<Rgb<u8>>) -> Vec<(Rgb<u8>, usize)> {
             acc
         });
 
-    histogram_vec.sort_by(|&(_, a), &(_, b)| a.cmp(&b));
+    histogram_vec.sort_by(|&(_, a), &(_, b)| b.cmp(&a));
 
     histogram_vec
 }
