@@ -3,6 +3,8 @@ extern crate delta_e;
 extern crate image;
 extern crate itertools;
 extern crate lab;
+#[macro_use]
+extern crate quick_error;
 
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -22,9 +24,28 @@ static MIN_BLACK: u8 = 8;
 static MAX_WHITE: u8 = 247;
 static MIN_DISTANCE_FOR_UNIQUENESS: f32 = 10.0;
 
+quick_error! {
+    #[derive(Debug)]
+    pub enum DistilError {
+        Io(path: String, err: image::ImageError) {
+            display("Distil failed to parse the passed image: {}", err)
+        }
+    }
+}
+
 pub struct Distil;
 
 impl Distil {
+    pub fn from_path_str(path_str: &str, palette_size: u8) -> Result<(), DistilError> {
+        match image::open(&Path::new(&path_str)) {
+            Ok(img) => {
+                Distil::new(img, palette_size);
+                Ok(())
+            }
+            Err(err) => Err(DistilError::Io(path_str.to_string(), err)),
+        }
+    }
+
     pub fn new(img: DynamicImage, palette_size: u8) {
         let scaled_img = scale_img(img);
         let quantized_img = quantize(scaled_img);
@@ -219,19 +240,20 @@ fn output_palette_as_img(palette: Vec<(Lab, usize)>, palette_size: u8) {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    // use std::path::Path;
 
-    use image;
+    // use image;
     use super::Distil;
 
     #[test]
-    fn it_works() {
-        let file = "/Users/elliot/dev/distil/images/img-1.jpg";
+    fn from_path_str() {
+        let path_str = "/Users/elliot/dev/distil/images/img-1.jpg";
 
-        if let Ok(img) = image::open(&Path::new(&file)) {
-            Distil::new(img, 5);
-        } else {
-            println!("Failed to open the passed image.");
+        match Distil::from_path_str(path_str, 5) {
+            Ok(_) => {}
+            Err(err) => {
+                println!("{}", err);
+            }
         }
     }
 }
