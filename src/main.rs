@@ -25,14 +25,14 @@ static MIN_DISTANCE_FOR_UNIQUENESS: f32 = 10.0;
 pub struct Distil;
 
 impl Distil {
-    pub fn new(img: DynamicImage) {
+    pub fn new(img: DynamicImage, palette_size: u8) {
         let scaled_img = scale_img(img);
         let quantized_img = quantize(scaled_img);
         let color_histogram = get_histogram(quantized_img);
         let colors_as_lab = to_lab(color_histogram);
         let palette = remove_similar_colors(colors_as_lab);
 
-        output_palette_as_img(palette);
+        output_palette_as_img(palette, palette_size);
     }
 }
 
@@ -161,9 +161,16 @@ fn remove_similar_colors(palette: Vec<(Lab, usize)>) -> Vec<(Lab, usize)> {
     refined_palette
 }
 
-fn output_palette_as_img(palette: Vec<(Lab, usize)>) {
-    let colors_img_width = 80 * palette.len() as u32;
-    let mut colors_img_buf = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(colors_img_width, 80);
+fn output_palette_as_img(palette: Vec<(Lab, usize)>, palette_size: u8) {
+    let colors_img_width;
+
+    if palette.len() < palette_size as usize {
+        colors_img_width = 80 * palette.len();
+    } else {
+        colors_img_width = 80 * palette_size as usize;
+    }
+
+    let mut colors_img_buf = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(colors_img_width as u32, 80);
 
     for (i, &(color, _)) in palette.iter().enumerate() {
         let x_offset = (80 * i) as u32;
@@ -173,6 +180,10 @@ fn output_palette_as_img(palette: Vec<(Lab, usize)>) {
 
         for (_, _, px) in sub_img.pixels_mut() {
             px.data = rgb.data;
+        }
+
+        if i == palette_size as usize - 1 {
+            break;
         }
     }
 
@@ -185,5 +196,5 @@ fn main() {
     let file = "/Users/elliot/dev/distil/test/sample-3.png";
     let img = image::open(&Path::new(&file)).unwrap();
 
-    Distil::new(img);
+    Distil::new(img, 8);
 }
