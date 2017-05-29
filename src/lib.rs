@@ -36,8 +36,8 @@ impl Distil {
     }
 }
 
-// Proportionally scales the image to a size where the total number of pixels
-// does not exceed `MAX_SAMPLE_COUNT`.
+/// Proportionally scales the passed image to a size where its total number of
+/// pixels does not exceed the value of `MAX_SAMPLE_COUNT`.
 fn scale_img(mut img: DynamicImage) -> DynamicImage {
     let (width, height) = img.dimensions();
 
@@ -53,7 +53,12 @@ fn scale_img(mut img: DynamicImage) -> DynamicImage {
     img
 }
 
-// Reduce the image's color palette down to 256 colors.
+/// Uses the NeuQuant quantization algorithm to reduce the passed image to a
+/// palette of `NQ_PALETTE_SIZE` colors.
+///
+/// Note: NeuQuant is designed to produce images with between 64 and 256
+/// colors. As such, `NQ_PALETTE_SIZE`'s value should be kept within those
+/// bounds.
 fn quantize(img: DynamicImage) -> Vec<Rgb<u8>> {
     let pixels = get_pixels(img);
     let quantized = NeuQuant::new(NQ_SAMPLE_FACTION, NQ_PALETTE_SIZE, &pixels);
@@ -69,6 +74,10 @@ fn quantize(img: DynamicImage) -> Vec<Rgb<u8>> {
         .collect()
 }
 
+/// Processes each of the pixels in the passed image, filtering out any that are
+/// transparent or too light / dark to be interesting, then returns a `Vec` of the
+/// `Rgba` channels of "interesting" pixels which is intended to be fed into
+/// `NeuQuant`.
 fn get_pixels(img: DynamicImage) -> Vec<u8> {
     let mut pixels = Vec::new();
 
@@ -85,6 +94,23 @@ fn get_pixels(img: DynamicImage) -> Vec<u8> {
     }
 
     pixels
+}
+
+/// Checks if the passed pixel is opaque or not.
+fn has_transparency(rgba: &Rgba<u8>) -> bool {
+    let alpha_channel = rgba[3];
+
+    alpha_channel != 255
+}
+
+/// Checks if the passed pixel is too dark to be interesting.
+fn is_black(rgba: &Rgba<u8>) -> bool {
+    rgba[0] < MIN_BLACK && rgba[1] < MIN_BLACK && rgba[2] < MIN_BLACK
+}
+
+/// Checks if the passed pixel is too light to be interesting.
+fn is_white(rgba: &Rgba<u8>) -> bool {
+    rgba[0] > MAX_WHITE && rgba[1] > MAX_WHITE && rgba[2] > MAX_WHITE
 }
 
 // Creates a histogram that counts the number of times each color occurs in the
@@ -105,20 +131,6 @@ fn get_histogram(pixels: Vec<Rgb<u8>>) -> Vec<(Rgb<u8>, usize)> {
     histogram_vec.sort_by(|&(_, a), &(_, b)| b.cmp(&a));
 
     histogram_vec
-}
-
-fn has_transparency(rgba: &Rgba<u8>) -> bool {
-    let alpha_channel = rgba[3];
-
-    alpha_channel != 255
-}
-
-fn is_black(rgba: &Rgba<u8>) -> bool {
-    rgba[0] < MIN_BLACK && rgba[1] < MIN_BLACK && rgba[2] < MIN_BLACK
-}
-
-fn is_white(rgba: &Rgba<u8>) -> bool {
-    rgba[0] > MAX_WHITE && rgba[1] > MAX_WHITE && rgba[2] > MAX_WHITE
 }
 
 fn to_lab(histogram: Vec<(Rgb<u8>, usize)>) -> Vec<(Lab, usize)> {
