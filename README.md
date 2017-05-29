@@ -68,17 +68,22 @@ and merged together when building `refined_palette`.
 ![](https://github.com/elliotekj/distil/blob/master/images/img-1.jpg?raw=true)
 ![](https://github.com/elliotekj/distil/blob/master/images/img-1-palette.png?raw=true)
 
-![](https://github.com/elliotekj/distil/blob/master/images/img-2.jpg?raw=true)
-![](https://github.com/elliotekj/distil/blob/master/images/img-2-palette.png?raw=true)
+<br>
 
 ![](https://github.com/elliotekj/distil/blob/master/images/img-3.jpg?raw=true)
 ![](https://github.com/elliotekj/distil/blob/master/images/img-3-palette.png?raw=true)
 
+<br>
+
 ![](https://github.com/elliotekj/distil/blob/master/images/img-4.jpg?raw=true)
 ![](https://github.com/elliotekj/distil/blob/master/images/img-4-palette.png?raw=true)
 
+<br>
+
 ![](https://github.com/elliotekj/distil/blob/master/images/img-5.jpg?raw=true)
 ![](https://github.com/elliotekj/distil/blob/master/images/img-5-palette.png?raw=true)
+
+<br>
 
 ![](https://github.com/elliotekj/distil/blob/master/images/img-6.jpg?raw=true)
 ![](https://github.com/elliotekj/distil/blob/master/images/img-6-palette.png?raw=true)
