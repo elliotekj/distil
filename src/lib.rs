@@ -336,7 +336,7 @@ fn distil_palette(palette: Vec<(Lab, usize)>) -> Distil {
 mod tests {
     use std::path::Path;
 
-    use super::Distil;
+    use super::{Distil, DistilError};
 
     #[test]
     fn from_path_str() {
@@ -369,20 +369,22 @@ mod tests {
     #[test]
     fn pure_white() {
         let path = Path::new("/Users/elliot/dev/distil/tests/pure-white.png");
-
         let distilled_err = Distil::from_path(&path).unwrap_err();
-        let as_string = format!("{}", distilled_err);
-        assert_eq!(as_string,
-                   "The passed image does not contain any interesting colours");
+
+        match distilled_err {
+            DistilError::Uninteresting => assert!(true),
+            _ => assert!(false),
+        }
     }
 
     #[test]
     fn pure_black() {
         let path = Path::new("/Users/elliot/dev/distil/tests/pure-black.png");
-
         let distilled_err = Distil::from_path(&path).unwrap_err();
-        let as_string = format!("{}", distilled_err);
-        assert_eq!(as_string,
-                   "The passed image does not contain any interesting colours");
+
+        match distilled_err {
+            DistilError::Uninteresting => assert!(true),
+            _ => assert!(false),
+        }
     }
 }
