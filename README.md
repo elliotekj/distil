@@ -56,7 +56,7 @@ and merged together when building `refined_palette`.
 
 ## 1.0 checklist
 
-- [ ] Handle a pure-white or pure-black image being processed. Pixels that are
+- [x] Handle a pure-white or pure-black image being processed. Pixels that are
   too dark or too light to be interesting in a palette currently get filtered
   out during quantization.
 - [ ] Add a way to create a distillation from multiple `Distil`s. i.e. A way to
