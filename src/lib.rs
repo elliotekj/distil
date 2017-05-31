@@ -31,6 +31,12 @@ quick_error! {
         Io(path: String, err: image::ImageError) {
             display("Distil failed to parse the passed image: {}", err)
         }
+
+        /// Produced when Distil can't find any "interesting" colours in a passed image. Colours
+        /// are deemed "interesting" if they fall between RGB(8, 8, 8) and RGB(247, 247, 247).
+        Uninteresting {
+            display("The passed image does not contain any interesting colours")
+        }
     }
 }
 
@@ -67,7 +73,7 @@ impl Distil {
     /// ```
     pub fn from_path_str(path_str: &str) -> Result<Distil, DistilError> {
         match image::open(&Path::new(&path_str)) {
-            Ok(img) => Ok(Distil::new(img)),
+            Ok(img) => Distil::new(img),
             Err(err) => Err(DistilError::Io(path_str.to_string(), err)),
         }
     }
@@ -89,19 +95,23 @@ impl Distil {
     /// ```
     pub fn from_path(path: &Path) -> Result<Distil, DistilError> {
         match image::open(path) {
-            Ok(img) => Ok(Distil::new(img)),
+            Ok(img) => Distil::new(img),
             Err(err) => Err(DistilError::Io(format!("{:?}", path), err)),
         }
     }
 
-    fn new(img: DynamicImage) -> Distil {
+    fn new(img: DynamicImage) -> Result<Distil, DistilError> {
         let scaled_img = scale_img(img);
-        let quantized_img = quantize(scaled_img);
 
-        let color_count = count_colors_as_lab(quantized_img);
-        let palette = remove_similar_colors(color_count);
+        match quantize(scaled_img) {
+            Ok(quantized_img) => {
+                let color_count = count_colors_as_lab(quantized_img);
+                let palette = remove_similar_colors(color_count);
 
-        distil_palette(palette)
+                Ok(distil_palette(palette))
+            }
+            Err(err) => return Err(err),
+        }
     }
 
     /// Export the distilled color palette as a PNG.
@@ -174,26 +184,30 @@ fn scale_img(mut img: DynamicImage) -> DynamicImage {
 /// Note: NeuQuant is designed to produce images with between 64 and 256
 /// colors. As such, `NQ_PALETTE_SIZE`'s value should be kept within those
 /// bounds.
-fn quantize(img: DynamicImage) -> Vec<Rgb<u8>> {
-    let pixels = get_pixels(img);
-    let quantized = NeuQuant::new(NQ_SAMPLE_FACTION, NQ_PALETTE_SIZE, &pixels);
+fn quantize(img: DynamicImage) -> Result<Vec<Rgb<u8>>, DistilError> {
+    match get_pixels(img) {
+        Ok(pixels) => {
+            let quantized = NeuQuant::new(NQ_SAMPLE_FACTION, NQ_PALETTE_SIZE, &pixels);
 
-    quantized.color_map_rgb()
-        .iter()
-        .chunks(3)
-        .into_iter()
-        .map(|rgb_iter| {
-            let rgb_slice: Vec<u8> = rgb_iter.cloned().collect();
-            Rgb::from_slice(&rgb_slice).clone()
-        })
-        .collect()
+            Ok(quantized.color_map_rgb()
+                .iter()
+                .chunks(3)
+                .into_iter()
+                .map(|rgb_iter| {
+                    let rgb_slice: Vec<u8> = rgb_iter.cloned().collect();
+                    Rgb::from_slice(&rgb_slice).clone()
+                })
+                .collect())
+        }
+        Err(err) => Err(err),
+    }
 }
 
 /// Processes each of the pixels in the passed image, filtering out any that are
 /// transparent or too light / dark to be interesting, then returns a `Vec` of the
 /// `Rgba` channels of "interesting" pixels which is intended to be fed into
 /// `NeuQuant`.
-fn get_pixels(img: DynamicImage) -> Vec<u8> {
+fn get_pixels(img: DynamicImage) -> Result<Vec<u8>, DistilError> {
     let mut pixels = Vec::new();
 
     for (_, _, px) in img.pixels() {
@@ -208,7 +222,11 @@ fn get_pixels(img: DynamicImage) -> Vec<u8> {
         }
     }
 
-    pixels
+    if pixels.len() == 0 {
+        return Err(DistilError::Uninteresting);
+    }
+
+    Ok(pixels)
 }
 
 /// Checks if the passed pixel is opaque or not.
@@ -346,5 +364,25 @@ mod tests {
                 println!("{}", err);
             }
         }
+    }
+
+    #[test]
+    fn pure_white() {
+        let path = Path::new("/Users/elliot/dev/distil/tests/pure-white.png");
+
+        let distilled_err = Distil::from_path(&path).unwrap_err();
+        let as_string = format!("{}", distilled_err);
+        assert_eq!(as_string,
+                   "The passed image does not contain any interesting colours");
+    }
+
+    #[test]
+    fn pure_black() {
+        let path = Path::new("/Users/elliot/dev/distil/tests/pure-black.png");
+
+        let distilled_err = Distil::from_path(&path).unwrap_err();
+        let as_string = format!("{}", distilled_err);
+        assert_eq!(as_string,
+                   "The passed image does not contain any interesting colours");
     }
 }
