@@ -44,7 +44,7 @@ their frequency in the image.
 
 The difference between two colours from the human eye perspective is calculated
 with the [CIEDE2000 colour difference
-algorithm](https://en.wikipedia.org/wiki/Color_difference#CIEDE2000)).
+algorithm](https://en.wikipedia.org/wiki/Color_difference#CIEDE2000).
 
 ##### Colour weight
 
