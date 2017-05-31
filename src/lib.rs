@@ -8,12 +8,14 @@ extern crate quick_error;
 
 use std::collections::BTreeMap;
 use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 
 use color_quant::NeuQuant;
 use delta_e::DE2000;
 use image::FilterType::Gaussian;
-use image::{imageops, ImageBuffer, GenericImage, DynamicImage, Rgba, Rgb, Pixel};
+use image::{DynamicImage, GenericImage, guess_format, ImageBuffer, ImageFormat, imageops, Pixel,
+            Rgb, Rgba};
 use itertools::Itertools;
 use lab::Lab;
 
@@ -30,6 +32,11 @@ quick_error! {
         /// Produced when Distil fails to parse the passed path.
         Io(path: String, err: image::ImageError) {
             display("Distil failed to parse the passed image: {}", err)
+        }
+
+        /// Produced when the image passed isn't a JPEG or a PNG.
+        UnsupportedFormat {
+            display("The passed image isn't a JPEG or a PNG")
         }
 
         /// Produced when Distil can't find any "interesting" colours in a passed image. Colours
@@ -72,10 +79,8 @@ impl Distil {
     /// }
     /// ```
     pub fn from_path_str(path_str: &str) -> Result<Distil, DistilError> {
-        match image::open(&Path::new(&path_str)) {
-            Ok(img) => Distil::new(img),
-            Err(err) => Err(DistilError::Io(path_str.to_string(), err)),
-        }
+        let path = Path::new(&path_str);
+        Distil::from_path(&path)
     }
 
     /// `from_path` takes a `&Path` to an image which exists locally on the
@@ -94,9 +99,13 @@ impl Distil {
     /// }
     /// ```
     pub fn from_path(path: &Path) -> Result<Distil, DistilError> {
+        let image_format = get_image_format(&path)?;
+
+        is_supported_format(image_format)?;
+
         match image::open(path) {
-            Ok(img) => Distil::new(img),
-            Err(err) => Err(DistilError::Io(format!("{:?}", path), err)),
+            Ok(img) => return Distil::new(img),
+            Err(err) => return Err(DistilError::Io(format!("{:?}", path), err)),
         }
     }
 
@@ -158,6 +167,30 @@ impl Distil {
         if let Ok(ref mut fout) = File::create(&out_path) {
             let _ = image::ImageRgb8(colors_img_buf).save(fout, image::PNG);
         };
+    }
+}
+
+fn get_image_format(path: &Path) -> Result<ImageFormat, DistilError> {
+    if let Ok(mut file) = File::open(path) {
+        let mut file_buffer = [0; 16];
+        let _ = file.read(&mut file_buffer);
+
+        if let Ok(format) = guess_format(&file_buffer) {
+            return Ok(format);
+        }
+    }
+
+    Err(DistilError::UnsupportedFormat)
+}
+
+fn is_supported_format(format: ImageFormat) -> Result<(), DistilError> {
+    match format {
+        ImageFormat::PNG | ImageFormat::JPEG => {
+            return Ok(());
+        }
+        _ => {
+            return Err(DistilError::UnsupportedFormat);
+        }
     }
 }
 
@@ -384,6 +417,17 @@ mod tests {
 
         match distilled_err {
             DistilError::Uninteresting => assert!(true),
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn unsupported_format() {
+        let path = Path::new("/Users/elliot/dev/distil/tests/unsupported-format.gif");
+        let distilled_err = Distil::from_path(&path).unwrap_err();
+
+        match distilled_err {
+            DistilError::UnsupportedFormat => assert!(true),
             _ => assert!(false),
         }
     }
