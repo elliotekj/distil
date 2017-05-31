@@ -72,6 +72,28 @@ impl Distil {
         }
     }
 
+    /// `from_path` takes a `&Path` to an image which exists locally on the
+    /// system and `Distil`s it.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use std::path::Path;
+    /// use distil::Distil;
+    ///
+    /// let path = Path::new("/Users/elliot/dev/distil/images/img-1.jpg");
+    ///
+    /// if let Ok(distilled) = Distil::from_path(&path) {
+    ///     // Do something with the returned `Distil` struct…
+    /// }
+    /// ```
+    pub fn from_path(path: &Path) -> Result<Distil, DistilError> {
+        match image::open(path) {
+            Ok(img) => Ok(Distil::new(img)),
+            Err(err) => Err(DistilError::Io(format!("{:?}", path), err)),
+        }
+    }
+
     fn new(img: DynamicImage) -> Distil {
         let scaled_img = scale_img(img);
         let quantized_img = quantize(scaled_img);
@@ -303,6 +325,20 @@ mod tests {
         let path_str = "/Users/elliot/dev/distil/images/img-1.jpg";
 
         match Distil::from_path_str(path_str) {
+            Ok(distilled) => {
+                distilled.as_img(&Path::new("img-1-palette.png"), 5);
+            }
+            Err(err) => {
+                println!("{}", err);
+            }
+        }
+    }
+
+    #[test]
+    fn from_path() {
+        let path = Path::new("/Users/elliot/dev/distil/images/img-1.jpg");
+
+        match Distil::from_path(&path) {
             Ok(distilled) => {
                 distilled.as_img(&Path::new("img-1-palette.png"), 5);
             }
