@@ -61,9 +61,6 @@ and merged together when building `refined_palette`.
   out during quantization.
 - [ ] Add a way to create a distillation from multiple `Distil`s. i.e. A way to
   get one `Distil` from the colours of multiple images.
-- [ ] Investigate a better way to scale down images. `image`'s
-  [`resize`](https://docs.rs/image/0.13.0/image/enum.DynamicImage.html#method.resize)
-  is too slow on large images.
 
 ## Examples
 
