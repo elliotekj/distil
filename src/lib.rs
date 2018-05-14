@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn from_path_str() {
-        let path_str = "/Users/elliot/dev/distil/images/img-1.jpg";
+        let path_str = "./images/img-1.jpg";
 
         match Distil::from_path_str(path_str) {
             Ok(distilled) => {
@@ -387,7 +387,7 @@ mod tests {
 
     #[test]
     fn from_path() {
-        let path = Path::new("/Users/elliot/dev/distil/images/img-1.jpg");
+        let path = Path::new("./images/img-1.jpg");
 
         match Distil::from_path(&path) {
             Ok(distilled) => {
@@ -401,7 +401,7 @@ mod tests {
 
     #[test]
     fn pure_white() {
-        let path = Path::new("/Users/elliot/dev/distil/tests/pure-white.png");
+        let path = Path::new("./tests/pure-white.png");
         let distilled_err = Distil::from_path(&path).unwrap_err();
 
         match distilled_err {
@@ -412,7 +412,7 @@ mod tests {
 
     #[test]
     fn pure_black() {
-        let path = Path::new("/Users/elliot/dev/distil/tests/pure-black.png");
+        let path = Path::new("./tests/pure-black.png");
         let distilled_err = Distil::from_path(&path).unwrap_err();
 
         match distilled_err {
@@ -423,7 +423,7 @@ mod tests {
 
     #[test]
     fn unsupported_format() {
-        let path = Path::new("/Users/elliot/dev/distil/tests/unsupported-format.gif");
+        let path = Path::new("./tests/unsupported-format.gif");
         let distilled_err = Distil::from_path(&path).unwrap_err();
 
         match distilled_err {
