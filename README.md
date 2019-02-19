@@ -1,4 +1,4 @@
-# Distil: a colour palette generator
+# Distil: a colour palette generator [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/elliotekj/distil?branch=master&svg=true)](https://ci.appveyor.com/project/elliotekj/distil)
 
 > WIP - Not ready for production use
 
